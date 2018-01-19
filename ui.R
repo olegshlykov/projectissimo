@@ -1,4 +1,5 @@
 library(shiny)
+library(DT)
 
 ui <- fluidPage(
   
@@ -17,8 +18,11 @@ ui <- fluidPage(
     ),
     
     mainPanel(
+      tabsetPanel(
+        tabPanel("Data Table", dataTableOutput("textfile")),
+        tabPanel("Poostaya")
+      )
       
-      dataTableOutput("textfile")
       
     )
   )

@@ -1,6 +1,6 @@
 server <- function(input, output) {
   
-  output$textfile <- renderDataTable({
+  output$textfile <- DT::renderDataTable({
     
     req(input$file1)
     
