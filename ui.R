@@ -13,8 +13,8 @@ ui <- fluidPage(
                 multiple = FALSE,
                 accept = c("text/csv", 
                            "text/comma-separated-values,text/plain", 
-                           ".csv"))
-      
+                           ".csv")),
+      width = 3
     ),
     
     mainPanel(
