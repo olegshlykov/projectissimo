@@ -1,6 +1,6 @@
 server <- function(input, output) {
   
-  output$textfile <- renderTable({
+  output$textfile <- renderDataTable({
     
     req(input$file1)
     

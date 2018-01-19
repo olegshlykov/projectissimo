@@ -18,7 +18,7 @@ ui <- fluidPage(
     
     mainPanel(
       
-      tableOutput("textfile")
+      dataTableOutput("textfile")
       
     )
   )
