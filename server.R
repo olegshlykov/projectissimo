@@ -7,5 +7,11 @@ server <- function(input, output) {
     df <- read.csv(input$file1$datapath)
     
   })
+  punka <- reactive({subset(mtcars, hp <= input$hrspwr & cyl %in% input$cylinders)})
+ output$cars <- DT::renderDataTable({
+   req(!is.null( punka() ))
+   
+    punka()
+ })
   
 }
