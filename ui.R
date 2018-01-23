@@ -24,7 +24,9 @@ ui <- fluidPage(
         tabPanel("Poostaya", 
                  sliderInput("hrspwr", "Horsepower", min = 51, max = 335, value = 335),
                  checkboxGroupInput("cylinders", "Cylinders", c("4", "6", "8"), selected = c("4", "6", "8")),
+                 checkboxInput("quo", "Quotes"),
                  actionButton("update", "Update"),
+                 
                  dataTableOutput("cars"))
       )
       

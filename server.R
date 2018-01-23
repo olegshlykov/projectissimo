@@ -8,17 +8,16 @@ server <- function(input, output) {
     
   })
   punka <- reactiveValues()
-  punka$a <- eventReactive(input$update, {
-     subset(mtcars, hp <= input$hrspwr & cyl %in% input$cylinders)
+  observeEvent(input$update, {
+     punka$a <- subset(mtcars, hp <= input$hrspwr & cyl %in% input$cylinders)
   })
   output$cars <- DT::renderDataTable({
     if (input$update!=0) {
-      punka
+      punka$a
       
     } else {
       mtcars
     }
-    
   })
   
 }
