@@ -1,5 +1,5 @@
 server <- function(input, output) {
-#proverochka  
+
   output$textfile <- DT::renderDataTable({
     
     req(input$file1)
@@ -7,14 +7,13 @@ server <- function(input, output) {
     df <- read.csv(input$file1$datapath)
     
   })
-  
-  punka <- eventReactive(input$update, {
-    subset(mtcars, hp <= input$hrspwr & cyl %in% input$cylinders)
+  punka <- reactiveValues()
+  punka$a <- eventReactive(input$update, {
+     subset(mtcars, hp <= input$hrspwr & cyl %in% input$cylinders)
   })
   output$cars <- DT::renderDataTable({
-    
     if (input$update!=0) {
-      punka()
+      punka
       
     } else {
       mtcars
