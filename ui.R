@@ -1,5 +1,8 @@
 library(shiny)
 library(DT)
+library(ggplot2)
+library(ggdendro)
+library(datasets)
 
 ui <- fluidPage(titlePanel("Uploading a CSV"),
                 
@@ -28,7 +31,7 @@ ui <- fluidPage(titlePanel("Uploading a CSV"),
                                    "None" = "",
                                    "Double Quote" = '"',
                                    "Single Quote" = "'"),
-                                   selected = '"'),
+                                 selected = '"'),
                                width = 3
                              ),
                              
@@ -61,10 +64,33 @@ ui <- fluidPage(titlePanel("Uploading a CSV"),
                       ),
                       
                       column(2, wellPanel(
-                             actionButton("update", "Update"), align = "center")
-                    )),
+                        actionButton("update", "Update"), align = "center")
+                      )),
                     
                     fluidRow(column(10, offset = 1,
                                     dataTableOutput("cars")))
+                  ),
+                  
+                  tabPanel("Iris Clustering",
+                           sidebarLayout(
+                             sidebarPanel(width = 3,
+                                          selectInput("col1", "Please select column 1", 
+                                                      choices = colnames(iris), 
+                                                      selected = "Petal.Length"),
+                                          selectInput("col2", "Please select column 2", 
+                                                      choices = colnames(iris), 
+                                                      selected = "Petal.Width"),
+                                          selectInput("ctype", "Please select the clustering method", 
+                                                      choices = c("K-Means", "Hierarchical"), 
+                                                      selected = "K-Means"),
+                                          tags$hr(),
+                                          uiOutput("controls"),
+                                          tags$hr(),
+                                          actionButton("clupdate", "Run Clustering", icon = icon("rocket"))
+                             ),
+                             mainPanel(
+                               plotOutput("Plotidze")
+                             )
+                           )
                   )
                 ))
