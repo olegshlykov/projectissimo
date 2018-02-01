@@ -63,7 +63,7 @@ server <- function(input, output) {
     
     if ( input$ctype == "K-Means") {
       req(!is.null(ris$cluster))
-    ggplot(ris$data, aes_string(input$col1, input$col2)) + aes(color = ris$cluster) + geom_point()
+    ggplot(ris$data, aes_string(input$col1, input$col2)) + geom_point(aes(color = ris$cluster)) + guides(colour = guide_legend("Clusters"))
     } else { 
       req(!is.null(ris$hcl))
       ggdendrogram(ris$hcl, theme_dendro = FALSE)
