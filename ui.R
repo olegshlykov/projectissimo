@@ -3,6 +3,7 @@ library(DT)
 library(ggplot2)
 library(ggdendro)
 library(datasets)
+library(rhandsontable)
 ui <- fluidPage(titlePanel("Projectissimo"),
                 
                 tabsetPanel(
@@ -31,6 +32,9 @@ ui <- fluidPage(titlePanel("Projectissimo"),
                                    "Double Quote" = '"',
                                    "Single Quote" = "'"),
                                  selected = '"'),
+                               tags$hr(),
+                               actionButton("change.apply", "Change data type", icon = icon("chevron-right")),
+                               rHandsontableOutput("datatype.change"),
                                width = 3
                              ),
                              

@@ -1,20 +1,44 @@
 server <- function(input, output, session) {
   source("functions.R")  
-  dfram <- reactive({
-    req(input$file1)
-    read.csv(input$file1$datapath,
+  values <- reactiveValues(dfram = NULL)
+  observeEvent(input$file1, {
+               values$dfram <- read.csv(input$file1$datapath,
              header = input$header,
              sep = input$sep,
              quote = input$quo)
-  }) 
+               }) 
+  
   output$textfile <- DT::renderDataTable({
-    head(dfram(), 10)
+    head(values$dfram, 10)
+  })
+  
+  output$datatype.change <- renderRHandsontable({
+    req(!is.null(values$dfram))
+    dtch <- values$dfram
+    all.types <- c("integer", "numeric", "factor", "character", "logical")
+    types.dtch <- sapply(dtch, class)
+    ntypes.dtch <- types.dtch
+    dtchange <- data.frame(types.dtch, ntypes.dtch)
+    colnames(dtchange) <- c("Existing data type", "New data type")
+    rhandsontable(dtchange, stretchH = "all", rowHeaderWidth = 100) %>%
+      hot_col("Existing data type", readOnly = TRUE) %>%
+      hot_col("New data type", type = "dropdown", source = all.types)
+  })
+  
+  observeEvent(input$change.apply, {
+    type.vector <- hot_to_r(input$datatype.change)
+    type.vector <- as.vector(type.vector[, 2])
+    #shlambo <- values$dfram
+    #shlambo <- convert.types(shlambo, type.vector)
+    #values$dfram <- shlambo
+    values$dfram <- convert.types(values$dfram, type.vector)
+    print(str(values$dfram))
   })
   
   output$ColSelect <- renderDataTable({
-    req(!is.null(dfram()))
-    numers <- sapply(dfram(), is.numeric)
-    cleaned <- dfram()[, numers]
+    req(!is.null(values$dfram))
+    numers <- sapply(values$dfram, is.numeric)
+    cleaned <- values$dfram[, numers]
     cnames <- colnames(cleaned)
     cmean <- colMeans(cleaned)
     cmean <- as.vector(cmean)
@@ -53,9 +77,9 @@ server <- function(input, output, session) {
   
   observeEvent(input$clupdate, {
     if ( input$ctype == "K-Means") {
-      req(!is.null(dfram()))
-      numers <- sapply(dfram(), is.numeric)
-      cleaned <- dfram()[, numers]  
+      req(!is.null(values$dfram))
+      numers <- sapply(values$dfram, is.numeric)
+      cleaned <- values$dfram[, numers]  
       ris$data <- cleaned
       features <- c(cleaned[, input$ColSelect_rows_selected])
       n_clusters <- input$centers
@@ -69,11 +93,11 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$ColSelect_rows_selected, {
-    updateSelectInput(session, "col1", choices = names(dfram()[,input$ColSelect_rows_selected]),
-                      selected = names(dfram()[,input$ColSelect_rows_selected[1]])
+    updateSelectInput(session, "col1", choices = names(values$dfram[,input$ColSelect_rows_selected]),
+                      selected = names(values$dfram[,input$ColSelect_rows_selected[1]])
                       )
-    updateSelectInput(session, "col2", choices = names(dfram()[,input$ColSelect_rows_selected]),
-                      selected = names(dfram()[,input$ColSelect_rows_selected[1]])
+    updateSelectInput(session, "col2", choices = names(values$dfram[,input$ColSelect_rows_selected]),
+                      selected = names(values$dfram[,input$ColSelect_rows_selected[1]])
     )
   })
   
@@ -81,7 +105,7 @@ server <- function(input, output, session) {
     
     if ( input$ctype == "K-Means") {
       req(!is.null(ris$cluster))
-      
+
       ggplot(ris$data, aes_string(input$col1, input$col2)) + geom_point(aes(color = ris$cluster)) + guides(colour = guide_legend("Clusters"))
     } else { 
       req(!is.null(ris$hcl))
