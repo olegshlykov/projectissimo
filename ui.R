@@ -4,6 +4,7 @@ library(ggplot2)
 library(ggdendro)
 library(datasets)
 library(rhandsontable)
+library(caret)
 ui <- fluidPage(titlePanel("Projectissimo"),
                 
                 tabsetPanel(
@@ -55,18 +56,38 @@ ui <- fluidPage(titlePanel("Projectissimo"),
                                           selectInput("ctype", "Please select the clustering method", 
                                                       choices = c("K-Means", "Hierarchical"), 
                                                       selected = "K-Means"),
-                                          selectInput("col1", "Please select column 1", 
-                                                      choices = NULL),
-                                          selectInput("col2", "Please select column 2", 
-                                                      choices = NULL),
                                           tags$hr(),
                                           uiOutput("controls"),
                                           tags$hr(),
                                           actionButton("clupdate", "Run Clustering", icon = icon("rocket"))
                              ),
                              mainPanel(
-                               plotOutput("Plotidze")
+                               plotOutput("Plotidze"),
+                               conditionalPanel(
+                                 condition = "output.Plotidze && input.ctype == 'K-Means'",
+                                 selectInput("col1", "Please select column 1", 
+                                             choices = NULL),
+                                 selectInput("col2", "Please select column 2", 
+                                             choices = NULL)
+                               )
+                               
                              )
                            )
+                  ),
+                  tabPanel("PCA",
+                           sidebarLayout(
+                             sidebarPanel(
+                               numericInput("pcnum", "Number of Principal Components", value = 2, min = 2, max = 10),
+                               checkboxInput("pcscale", "Scale", TRUE),
+                               checkboxInput("pccenter", "Center", TRUE),
+                               actionButton("pcarun", "Run PCA", icon = icon("rocket"))
+                               
+                               
+                             ),
+                             mainPanel(
+                      plotOutput("pca"),
+                      tableOutput("eigen")
+                             )
+                  )
                   )
                 ))

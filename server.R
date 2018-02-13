@@ -1,6 +1,6 @@
 server <- function(input, output, session) {
   source("functions.R")  
-  values <- reactiveValues(dfram = NULL)
+  values <- reactiveValues(dfram = NULL, pca.out = NULL)
   observeEvent(input$file1, {
                values$dfram <- read.csv(input$file1$datapath,
              header = input$header,
@@ -26,6 +26,7 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$change.apply, {
+    req(!is.null(values$dfram))
     type.vector <- hot_to_r(input$datatype.change)
     type.vector <- as.vector(type.vector[, 2])
     #shlambo <- values$dfram
@@ -76,6 +77,7 @@ server <- function(input, output, session) {
   ris = reactiveValues(data = NULL, cluster = NULL, hcl = NULL)
   
   observeEvent(input$clupdate, {
+    if (!is.null(input$ColSelect_rows_selected)) {
     if ( input$ctype == "K-Means") {
       req(!is.null(values$dfram))
       numers <- sapply(values$dfram, is.numeric)
@@ -89,7 +91,9 @@ server <- function(input, output, session) {
       dd <- dist(ris$data)
       ris$hcl <- hclust(dd, method = input$method)
     }
-    
+    } else {
+      showNotification("Please select columns to cluster")
+    }
   })
   
   observeEvent(input$ColSelect_rows_selected, {
@@ -111,6 +115,27 @@ server <- function(input, output, session) {
       req(!is.null(ris$hcl))
       ggdendrogram(ris$hcl, theme_dendro = FALSE)
     }
+  })
+  
+  observeEvent(input$pcarun, {
+    numers <- sapply(values$dfram, is.numeric)
+    cleaned <- values$dfram[, numers]
+    values$pca.out <- prcomp(cleaned, scale = input$pcscale, center = input$pccenter, rank. = input$pcnum)
+  })
+  
+  output$pca <- renderPlot({
+    req(!is.null(values$dfram), input$pcarun > 0)
+    plot(values$pca.out$x[,1], values$pca.out$x[,2], xlab = "PC 1", ylab = "PC 2")
+  })
+  
+  output$eigen <- renderTable({
+    #doesn't work yet, not a square matrix
+    
+    #req(!is.null(values$dfram))
+    #numers <- sapply(values$dfram, is.numeric)
+    #cleaned <- values$dfram[, numers]
+    #ev <- eigen(cleaned)
+    #print(ev$values)
   })
   
 }
