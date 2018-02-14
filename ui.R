@@ -86,7 +86,7 @@ ui <- fluidPage(titlePanel("Projectissimo"),
                              ),
                              mainPanel(
                       plotOutput("pca"),
-                      tableOutput("eigen")
+                      dataTableOutput("eigen")
                              )
                   )
                   )

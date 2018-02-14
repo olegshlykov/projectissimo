@@ -33,7 +33,6 @@ server <- function(input, output, session) {
     #shlambo <- convert.types(shlambo, type.vector)
     #values$dfram <- shlambo
     values$dfram <- convert.types(values$dfram, type.vector)
-    print(str(values$dfram))
   })
   
   output$ColSelect <- renderDataTable({
@@ -128,14 +127,16 @@ server <- function(input, output, session) {
     plot(values$pca.out$x[,1], values$pca.out$x[,2], xlab = "PC 1", ylab = "PC 2")
   })
   
-  output$eigen <- renderTable({
+  output$eigen <- DT::renderDataTable({
     #doesn't work yet, not a square matrix
     
-    #req(!is.null(values$dfram))
-    #numers <- sapply(values$dfram, is.numeric)
-    #cleaned <- values$dfram[, numers]
-    #ev <- eigen(cleaned)
-    #print(ev$values)
+    req(!is.null(values$dfram))
+    numers <- sapply(values$dfram, is.numeric)
+    cleaned <- values$dfram[, numers]
+    cleaned.cor <- cor(cleaned)
+    ev <- eigen(cleaned.cor)
+    ev.data <- datatable(t(ev$values), rownames = FALSE)
+    ev.data
   })
   
 }
