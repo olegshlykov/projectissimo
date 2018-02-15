@@ -15,3 +15,14 @@ convert.types <- function(obj, types){
   }
   obj
 }
+
+eigen.get.table <- function(x) {
+  sqr.cleaned <- cor(x)
+  ev <- eigen(sqr.cleaned)
+  colnumchick <- 1:length(x)
+  cumulcher <- cumsum(ev$values)/sum(ev$values)
+  ev.data <- data.frame(colnumchick, ev$values, cumulcher)
+  colnames(ev.data) <- c("Number of factors", "Eigenvalues", "Cumulative %")
+  rownames(ev.data) <- NULL
+  ev.data
+}

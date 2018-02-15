@@ -1,52 +1,58 @@
 server <- function(input, output, session) {
   source("functions.R")  
-  values <- reactiveValues(dfram = NULL, pca.out = NULL)
+  values <- reactiveValues(dfram = NULL, pca.out = NULL, cleaned = NULL, sorted = NULL, train.poopi = NULL, test.poopi = NULL)
+  ris = reactiveValues(data = NULL, cluster = NULL, hcl = NULL)
   observeEvent(input$file1, {
-               values$dfram <- read.csv(input$file1$datapath,
-             header = input$header,
-             sep = input$sep,
-             quote = input$quo)
-               }) 
+    values$dfram <- read.csv(input$file1$datapath,
+                             header = input$header,
+                             sep = input$sep,
+                             quote = input$quo)
+    numers <- sapply(values$dfram, is.numeric)
+    values$cleaned <- values$dfram[, numers]
+    updateSelectInput(session, "preval", choices = names(values$dfram),
+                      selected = names(values$dfram[1]))
+    updateNumericInput(session, "mtry.sel", value = sqrt(ncol(values$dfram)))
+  })
+  
+  observeEvent(values$dfram, {
+    numers <- sapply(values$dfram, is.numeric)
+    values$cleaned <- values$dfram[, numers]
+  })
   
   output$textfile <- DT::renderDataTable({
     head(values$dfram, 10)
   })
   
-  output$datatype.change <- renderRHandsontable({
+  output$datatypechange <- renderRHandsontable({
     req(!is.null(values$dfram))
     dtch <- values$dfram
     all.types <- c("integer", "numeric", "factor", "character", "logical")
     types.dtch <- sapply(dtch, class)
     ntypes.dtch <- types.dtch
     dtchange <- data.frame(types.dtch, ntypes.dtch)
-    colnames(dtchange) <- c("Existing data type", "New data type")
-    rhandsontable(dtchange, stretchH = "all", rowHeaderWidth = 100) %>%
-      hot_col("Existing data type", readOnly = TRUE) %>%
-      hot_col("New data type", type = "dropdown", source = all.types)
+    colnames(dtchange) <- c("Existing type", "New type")
+    rhandsontable(dtchange, stretchH = "all", rowHeaderWidth = 100, width = 300) %>%
+      hot_col("Existing type", readOnly = TRUE) %>%
+      hot_col("New type", type = "dropdown", source = all.types)
   })
   
   observeEvent(input$change.apply, {
     req(!is.null(values$dfram))
-    type.vector <- hot_to_r(input$datatype.change)
+    type.vector <- hot_to_r(input$datatypechange)
     type.vector <- as.vector(type.vector[, 2])
-    #shlambo <- values$dfram
-    #shlambo <- convert.types(shlambo, type.vector)
-    #values$dfram <- shlambo
     values$dfram <- convert.types(values$dfram, type.vector)
   })
   
   output$ColSelect <- renderDataTable({
     req(!is.null(values$dfram))
-    numers <- sapply(values$dfram, is.numeric)
-    cleaned <- values$dfram[, numers]
-    cnames <- colnames(cleaned)
-    cmean <- colMeans(cleaned)
+    cnames <- colnames(values$cleaned)
+    cmean <- colMeans(values$cleaned)
     cmean <- as.vector(cmean)
-    cmedian <- apply(cleaned, 2, median)
+    cmedian <- apply(values$cleaned, 2, median)
     cmedian <- as.vector(cmedian)
-    cmode <-  apply(cleaned, 2, mean)
+    cmode <-  apply(values$cleaned, 2, mean)
     cmode <- as.vector(cmode)
-    crange <- sapply(cleaned, range)
+    crange <- sapply(values$cleaned, range)
     crange <- paste(crange[1, ], crange[2, ], sep=" - ")
     ColSel <- data.frame(cnames, cmean, cmedian, cmode, crange)
     colnames(ColSel) <- c("Column Name", "Mean", "Median", "Mode", "Range")
@@ -73,23 +79,20 @@ server <- function(input, output, session) {
     
   })
   
-  ris = reactiveValues(data = NULL, cluster = NULL, hcl = NULL)
-  
   observeEvent(input$clupdate, {
     if (!is.null(input$ColSelect_rows_selected)) {
-    if ( input$ctype == "K-Means") {
-      req(!is.null(values$dfram))
-      numers <- sapply(values$dfram, is.numeric)
-      cleaned <- values$dfram[, numers]  
-      ris$data <- cleaned
-      features <- c(cleaned[, input$ColSelect_rows_selected])
-      n_clusters <- input$centers
-      iris_clusters <- kmeans(cleaned[, input$ColSelect_rows_selected], n_clusters, iter.max = input$iter, nstart = input$nstart, algorithm = input$algo)
-      ris$cluster <- as.factor(iris_clusters$cluster)
-    } else {
-      dd <- dist(ris$data)
-      ris$hcl <- hclust(dd, method = input$method)
-    }
+      if ( input$ctype == "K-Means") {
+        req(!is.null(values$dfram))
+        ris$data <- values$cleaned
+        features <- c(values$cleaned[, input$ColSelect_rows_selected])
+        n_clusters <- input$centers
+        iris_clusters <- kmeans(values$cleaned[, input$ColSelect_rows_selected], n_clusters, iter.max = input$iter, 
+                                nstart = input$nstart, algorithm = input$algo)
+        ris$cluster <- as.factor(iris_clusters$cluster)
+      } else {
+        dd <- dist(ris$data)
+        ris$hcl <- hclust(dd, method = input$method)
+      }
     } else {
       showNotification("Please select columns to cluster")
     }
@@ -98,17 +101,17 @@ server <- function(input, output, session) {
   observeEvent(input$ColSelect_rows_selected, {
     updateSelectInput(session, "col1", choices = names(values$dfram[,input$ColSelect_rows_selected]),
                       selected = names(values$dfram[,input$ColSelect_rows_selected[1]])
-                      )
+    )
+    req(length(input$ColSelect_rows_selected) >= 2)
     updateSelectInput(session, "col2", choices = names(values$dfram[,input$ColSelect_rows_selected]),
-                      selected = names(values$dfram[,input$ColSelect_rows_selected[1]])
+                      selected = names(values$dfram[,input$ColSelect_rows_selected[2]])
     )
   })
   
   output$Plotidze <- renderPlot({
-    
     if ( input$ctype == "K-Means") {
       req(!is.null(ris$cluster))
-
+      
       ggplot(ris$data, aes_string(input$col1, input$col2)) + geom_point(aes(color = ris$cluster)) + guides(colour = guide_legend("Clusters"))
     } else { 
       req(!is.null(ris$hcl))
@@ -117,26 +120,98 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$pcarun, {
-    numers <- sapply(values$dfram, is.numeric)
-    cleaned <- values$dfram[, numers]
-    values$pca.out <- prcomp(cleaned, scale = input$pcscale, center = input$pccenter, rank. = input$pcnum)
+    req(!is.null(values$dfram))
+    if (input$pcnum <= length(values$cleaned)) {
+      cleaned.cor <- cor(values$cleaned)
+      values$pca.out <-  principal(values$cleaned, nfactors = input$pcnum, rotate = input$pcrotate)
+      loadings.table <- data.frame(unclass(values$pca.out$loadings))
+      sorting <- paste0(substring(colnames(loadings.table), 0, 2)[1], sort(as.integer(substring(colnames(loadings.table), 3))))
+      sorted <- loadings.table[, sorting]
+      for (i in 1:length(sorted)) {
+        for (v in 1:length(sorted[, i])) {
+          if ( sorted[v, i] > -input$pcafilter  && sorted[v, i] < input$pcafilter) { sorted[v, i] = NA }
+        }
+      }
+      values$sorted <- sorted[order(-sorted[,1], -sorted[,2]), ]
+    } else {showNotification("Invalid number of components")}
   })
   
-  output$pca <- renderPlot({
-    req(!is.null(values$dfram), input$pcarun > 0)
-    plot(values$pca.out$x[,1], values$pca.out$x[,2], xlab = "PC 1", ylab = "PC 2")
-  })
+  output$loadings <- DT::renderDataTable({
+    req(!is.null(values$pca.out$loadings))
+    values$sorted
+  }, options = list(
+    autoWidth = TRUE,
+    columnDefs = list(list(width = '200px', targets = "_all")),
+    pageLength = 15
+  ))
   
   output$eigen <- DT::renderDataTable({
-    #doesn't work yet, not a square matrix
+    req(!is.null(values$cleaned))
+    eigen.get.table(values$cleaned)
+  }, rownames = FALSE, options = list(
+    autoWidth = TRUE,
+    columnDefs = list(list(width = '100px', targets = "_all"))
+  ))
+  
+  observeEvent(input$run.tree, {
+    #PREDICT VALUE FROM INPUT
+    req(values$dfram)
+    percent <- input$train.percent.sel * 0.01
     
-    req(!is.null(values$dfram))
-    numers <- sapply(values$dfram, is.numeric)
-    cleaned <- values$dfram[, numers]
-    cleaned.cor <- cor(cleaned)
-    ev <- eigen(cleaned.cor)
-    ev.data <- datatable(t(ev$values), rownames = FALSE)
-    ev.data
+    if (input$treechoose == "Decision Trees") {
+      set.seed(666)
+      train <- sample(1:nrow(values$dfram), percent * nrow(values$dfram))
+      preval <- as.name(input$preval)
+      treeboy <- rpart( Species ~., data = values$dfram, subset = train, method = 'class')
+      treeboy.train.pred <- predict(treeboy, values$dfram[train, ], type = "class")
+      treeboy.test.pred <- predict(treeboy, values$dfram[-train, ], type = "class")
+      
+      values$train.poopi <- with(values$dfram[train, ], table(treeboy.train.pred, Species))
+      bobik <- data.frame(matrix(nrow = nrow(values$train.poopi), ncol = 0))
+      for (i in 1:nrow(values$train.poopi)) {
+        bobik <- cbind(bobik, values$train.poopi[, i])
+      }
+      colnames(bobik) <- rownames(bobik)
+      values$train.poopi <- bobik
+      
+      values$test.poopi <- with(values$dfram[-train, ], table(treeboy.test.pred, Species))
+      bobik2 <- data.frame(matrix(nrow = nrow(values$test.poopi), ncol = 0))
+      for (i in 1:nrow(values$test.poopi)) {
+        bobik2 <- cbind(bobik2, values$test.poopi[, i])
+      }
+      colnames(bobik2) <- rownames(bobik2)
+      values$test.poopi <- bobik2
+    } else {
+      set.seed(555)
+      train <- sample(1:nrow(values$dfram), percent * nrow(values$dfram))
+      rfboy <- randomForest(Species ~., data = values$dfram, subset = train, mtry = input$mtry.sel, ntree = input$ntree.sel)
+      rfboy.train.pred <- predict(rfboy, values$dfram[train, ], type = "class")
+      rfboy.test.pred <- predict(rfboy, values$dfram[-train, ], type = "class")
+      
+      values$train.poopi <- with(values$dfram[train, ], table(rfboy.train.pred, Species))
+      bobik <- data.frame(matrix(nrow = nrow(values$train.poopi), ncol = 0))
+      for (i in 1:nrow(values$train.poopi)) {
+        bobik <- cbind(bobik, values$train.poopi[, i])
+      }
+      colnames(bobik) <- rownames(bobik)
+      values$train.poopi <- bobik
+      
+      values$test.poopi <- with(values$dfram[-train, ], table(rfboy.test.pred, Species))
+      bobik2 <- data.frame(matrix(nrow = nrow(values$test.poopi), ncol = 0))
+      for (i in 1:nrow(values$test.poopi)) {
+        bobik2 <- cbind(bobik2, values$test.poopi[, i])
+      }
+      colnames(bobik2) <- rownames(bobik2)
+      values$test.poopi <- bobik2
+    }
+  })
+  
+  output$train.prediction <- renderDataTable({
+    data.frame(values$train.poopi)
+  })
+  
+  output$test.prediction <- renderDataTable({
+    data.frame(values$test.poopi)
   })
   
 }
