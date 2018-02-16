@@ -190,8 +190,8 @@ server <- function(input, output, session) {
       rfboy <- randomForest(as.formula(paste0(preval, "~.")), data = values$dfram, subset = train, mtry = input$mtry.sel, ntree = input$ntree.sel)
       rfboy.train.pred <- predict(rfboy, values$dfram[train, ], type = "class")
       rfboy.test.pred <- predict(rfboy, values$dfram[-train, ], type = "class")
-      values$accu.train <- confusionMatrix(treeboy.train.pred, values$dfram[train, ][[preval]])
-      values$accu.test <- confusionMatrix(treeboy.test.pred, values$dfram[-train, ][[preval]])
+      values$accu.train <- confusionMatrix(rfboy.train.pred, values$dfram[train, ][[preval]])
+      values$accu.test <- confusionMatrix(rfboy.test.pred, values$dfram[-train, ][[preval]])
       values$train.poopi <- with(values$dfram[train, ], table(rfboy.train.pred, values$dfram[train, ][[preval]]))
       values$test.poopi <- with(values$dfram[-train, ], table(rfboy.test.pred, values$dfram[-train, ][[preval]]))
     }
