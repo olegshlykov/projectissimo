@@ -34,7 +34,6 @@ ui <- fluidPage(titlePanel("Projectissimo"),
                                             actionButton("change.apply", "Change data type", icon = icon("rocket"))
                                           )
                              ),
-                             
                              mainPanel(dataTableOutput("textfile"))
                            )),
                   
@@ -52,8 +51,7 @@ ui <- fluidPage(titlePanel("Projectissimo"),
                                           tags$hr(),
                                           uiOutput("controls"),
                                           tags$hr(),
-                                          actionButton("clupdate", "Run Clustering", icon = icon("rocket"))
-                                          
+                                          actionButton("clupdate", "Run Clustering", icon = icon("rocket"))       
                              ),
                              mainPanel(
                                plotOutput("Plotidze"),
@@ -64,7 +62,6 @@ ui <- fluidPage(titlePanel("Projectissimo"),
                                  selectInput("col2", "Please select column 2", 
                                              choices = NULL)
                                )
-                               
                              )
                            )
                   ),
@@ -80,8 +77,7 @@ ui <- fluidPage(titlePanel("Projectissimo"),
                              ),
                              mainPanel(
                                dataTableOutput("eigen"),
-                               dataTableOutput("loadings")
-                               
+                               dataTableOutput("loadings") 
                              )
                            )
                   ),
@@ -102,11 +98,10 @@ ui <- fluidPage(titlePanel("Projectissimo"),
                              ),
                              mainPanel(
                                tags$h1("Train prediction"),
-                               dataTableOutput("train.prediction"),
+                               rHandsontableOutput("train.prediction"),
                                tags$h1("Test prediction"),
-                               dataTableOutput("test.prediction")
+                               rHandsontableOutput("test.prediction")
                              )
                            )
-                           
                   )
                 ))

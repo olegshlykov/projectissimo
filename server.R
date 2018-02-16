@@ -1,7 +1,9 @@
 server <- function(input, output, session) {
   source("functions.R")  
+  
   values <- reactiveValues(dfram = NULL, pca.out = NULL, cleaned = NULL, sorted = NULL, train.poopi = NULL, test.poopi = NULL)
   ris = reactiveValues(data = NULL, cluster = NULL, hcl = NULL)
+  
   observeEvent(input$file1, {
     values$dfram <- read.csv(input$file1$datapath,
                              header = input$header,
@@ -14,14 +16,17 @@ server <- function(input, output, session) {
     updateNumericInput(session, "mtry.sel", value = sqrt(ncol(values$dfram)))
   })
   
+  
   observeEvent(values$dfram, {
     numers <- sapply(values$dfram, is.numeric)
     values$cleaned <- values$dfram[, numers]
   })
   
+  
   output$textfile <- DT::renderDataTable({
     head(values$dfram, 10)
   })
+  
   
   output$datatypechange <- renderRHandsontable({
     req(!is.null(values$dfram))
@@ -36,12 +41,14 @@ server <- function(input, output, session) {
       hot_col("New type", type = "dropdown", source = all.types)
   })
   
+  
   observeEvent(input$change.apply, {
     req(!is.null(values$dfram))
     type.vector <- hot_to_r(input$datatypechange)
     type.vector <- as.vector(type.vector[, 2])
     values$dfram <- convert.types(values$dfram, type.vector)
   })
+  
   
   output$ColSelect <- renderDataTable({
     req(!is.null(values$dfram))
@@ -75,9 +82,9 @@ server <- function(input, output, session) {
                     choices = c("ward.D", "ward.D2", "single", "complete", "average", "mcquitty", "median", "centroid"),
                     selected = "ward.D2")
       )
-    }
-    
+    }  
   })
+  
   
   observeEvent(input$clupdate, {
     if (!is.null(input$ColSelect_rows_selected)) {
@@ -97,6 +104,7 @@ server <- function(input, output, session) {
       showNotification("Please select columns to cluster")
     }
   })
+  
   
   observeEvent(input$ColSelect_rows_selected, {
     updateSelectInput(session, "col1", choices = names(values$dfram[,input$ColSelect_rows_selected]),
@@ -119,6 +127,7 @@ server <- function(input, output, session) {
     }
   })
   
+  
   observeEvent(input$pcarun, {
     req(!is.null(values$dfram))
     if (input$pcnum <= length(values$cleaned)) {
@@ -136,6 +145,7 @@ server <- function(input, output, session) {
     } else {showNotification("Invalid number of components")}
   })
   
+  
   output$loadings <- DT::renderDataTable({
     req(!is.null(values$pca.out$loadings))
     values$sorted
@@ -145,6 +155,7 @@ server <- function(input, output, session) {
     pageLength = 15
   ))
   
+  
   output$eigen <- DT::renderDataTable({
     req(!is.null(values$cleaned))
     eigen.get.table(values$cleaned)
@@ -152,6 +163,7 @@ server <- function(input, output, session) {
     autoWidth = TRUE,
     columnDefs = list(list(width = '100px', targets = "_all"))
   ))
+  
   
   observeEvent(input$run.tree, {
     #PREDICT VALUE FROM INPUT
@@ -206,12 +218,16 @@ server <- function(input, output, session) {
     }
   })
   
-  output$train.prediction <- renderDataTable({
-    data.frame(values$train.poopi)
+  
+  output$train.prediction <- renderRHandsontable({
+    req(values$train.poopi)
+    rhandsontable(values$train.poopi, rowHeaderWidth = 100)
   })
   
-  output$test.prediction <- renderDataTable({
-    data.frame(values$test.poopi)
+  
+  output$test.prediction <- renderRHandsontable({
+    req(values$train.poopi)
+    rhandsontable(values$test.poopi, rowHeaderWidth = 100)
   })
   
 }
