@@ -14,6 +14,12 @@ Version: 1.0-8
 Hash: f9a24227064c77b22d79075b1abcfb00
 Requires: brglm, gtools, lme4, qvcalc
 
+Package: C50
+Source: CRAN
+Version: 0.1.1
+Hash: 0ccd38126314bc8e29e5e2c8f8112aa0
+Requires: Cubist, partykit
+
 Package: CVST
 Source: CRAN
 Version: 0.2-1
@@ -42,6 +48,11 @@ Source: CRAN
 Version: 0.2
 Hash: 36b032203797956fedad5a25055016a9
 Requires: htmltools, htmlwidgets, magrittr
+
+Package: Formula
+Source: CRAN
+Version: 1.2-2
+Hash: 31c4658e6ae879eee45fcf7b6d109464
 
 Package: ISwR
 Source: CRAN
@@ -131,7 +142,7 @@ Hash: e3a02070cf705d3ad1c5af1635a515a3
 Package: bindrcpp
 Source: CRAN
 Version: 0.2
-Hash: 7f7dcd1dc351f84798fd3dc4eb8a0e78
+Hash: a2aea10792750b6ab487a6c58c399e60
 Requires: Rcpp, bindr, plogr
 
 Package: bitops
@@ -199,7 +210,7 @@ Hash: ff2840dd9b0d563fc80377a5a45510cd
 Package: ddalpha
 Source: CRAN
 Version: 1.3.1.1
-Hash: 1720f083ce5106bccaca8158089134f4
+Hash: c35c2d06aec7f68e0f50e75e4dc94138
 Requires: BH, MASS, Rcpp, robustbase, sfsmisc
 
 Package: dichromat
@@ -221,7 +232,7 @@ Requires: DRR
 Package: dplyr
 Source: CRAN
 Version: 0.7.4
-Hash: e1c300a22e22086568531c9d0c93bafc
+Hash: efd545ebd71ef2ae7c8f1baed155b346
 Requires: BH, R6, Rcpp, assertthat, bindrcpp, glue, magrittr,
     pkgconfig, plogr, rlang, tibble
 
@@ -321,6 +332,12 @@ Version: 1.3.5
 Hash: ecd2d1c0cac94fe968398551b57d7fb2
 Requires: Rcpp
 
+Package: inum
+Source: CRAN
+Version: 1.0-0
+Hash: 084dec57c875e24696dd9e16747a92c2
+Requires: libcoin
+
 Package: ipred
 Source: CRAN
 Version: 0.9-6
@@ -364,10 +381,16 @@ Source: CRAN
 Version: 0.2.1
 Hash: 88926ad9c43581fd0822a37c8ed09f05
 
+Package: libcoin
+Source: CRAN
+Version: 1.0-1
+Hash: a175d9a8a38164889acc54522a569978
+Requires: mvtnorm
+
 Package: lme4
 Source: CRAN
 Version: 1.1-15
-Hash: a1a457ca93395c5525cfcc9d14ea7249
+Hash: 59792c15b725e065e75ec788a8f259cd
 Requires: MASS, Rcpp, RcppEigen, minqa, nloptr
 
 Package: lubridate
@@ -460,6 +483,12 @@ Source: CRAN
 Version: 1.2-4
 Hash: 9686f9d4f2c5a7d477712b672ded2b05
 Requires: coin, modeltools, mvtnorm, sandwich, strucchange, zoo
+
+Package: partykit
+Source: CRAN
+Version: 1.2-0
+Hash: 465eeb36d81348da2df782388c7c6b20
+Requires: Formula, inum, libcoin, mvtnorm
 
 Package: pkgconfig
 Source: CRAN
@@ -659,6 +688,11 @@ Package: timeDate
 Source: CRAN
 Version: 3042.101
 Hash: 7df1e4dffe7ba0d2fa782094f637b7b9
+
+Package: tree
+Source: CRAN
+Version: 1.0-37
+Hash: cadc8c708e9e07f81647c53d5245d081
 
 Package: viridisLite
 Source: CRAN

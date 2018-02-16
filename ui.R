@@ -94,13 +94,18 @@ ui <- fluidPage(titlePanel("Projectissimo"),
                                             numericInput("mtry.sel", "Mtry", value = 2, min =1, max = 15)
                                           ),
                                           actionButton("run.tree", "Apply", icon = icon("rocket"))
-                                          
                              ),
                              mainPanel(
-                               tags$h1("Train prediction"),
+                               column(width = 4,
+                                 tags$h1("Train prediction"),
                                rHandsontableOutput("train.prediction"),
+                               textOutput("accutrain")
+                               ),
+                               column(width = 4,
                                tags$h1("Test prediction"),
-                               rHandsontableOutput("test.prediction")
+                               rHandsontableOutput("test.prediction"),
+                               textOutput("accutest")
+                               )
                              )
                            )
                   )

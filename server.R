@@ -1,7 +1,8 @@
 server <- function(input, output, session) {
   source("functions.R")  
   
-  values <- reactiveValues(dfram = NULL, pca.out = NULL, cleaned = NULL, sorted = NULL, train.poopi = NULL, test.poopi = NULL)
+  values <- reactiveValues(dfram = NULL, pca.out = NULL, cleaned = NULL, sorted = NULL, 
+                           train.poopi = NULL, test.poopi = NULL, accu.train = NULL, accu.test = NULL)
   ris = reactiveValues(data = NULL, cluster = NULL, hcl = NULL)
   
   observeEvent(input$file1, {
@@ -11,8 +12,9 @@ server <- function(input, output, session) {
                              quote = input$quo)
     numers <- sapply(values$dfram, is.numeric)
     values$cleaned <- values$dfram[, numers]
-    updateSelectInput(session, "preval", choices = names(values$dfram),
-                      selected = names(values$dfram[1]))
+    colfact <- sapply(values$dfram, is.factor)
+    updateSelectInput(session, "preval", choices = names(colfact[colfact]),
+                      selected = names(colfact[colfact][1]))
     updateNumericInput(session, "mtry.sel", value = sqrt(ncol(values$dfram)))
   })
   
@@ -20,6 +22,10 @@ server <- function(input, output, session) {
   observeEvent(values$dfram, {
     numers <- sapply(values$dfram, is.numeric)
     values$cleaned <- values$dfram[, numers]
+    colfact <- sapply(values$dfram, is.factor)
+    updateSelectInput(session, "preval", choices = names(colfact[colfact]),
+                      selected = names(colfact[colfact][1]))
+    updateNumericInput(session, "mtry.sel", value = sqrt(ncol(values$dfram)))
   })
   
   
@@ -166,56 +172,43 @@ server <- function(input, output, session) {
   
   
   observeEvent(input$run.tree, {
-    #PREDICT VALUE FROM INPUT
     req(values$dfram)
     percent <- input$train.percent.sel * 0.01
+    preval <- input$preval
+    set.seed(555)
+    train <- sample(1:nrow(values$dfram), percent * nrow(values$dfram))
     
     if (input$treechoose == "Decision Trees") {
-      set.seed(666)
-      train <- sample(1:nrow(values$dfram), percent * nrow(values$dfram))
-      preval <- as.name(input$preval)
-      treeboy <- rpart( Species ~., data = values$dfram, subset = train, method = 'class')
+      treeboy <- rpart(as.formula(paste0(preval, "~.")), data = values$dfram, subset = train, method = 'class')
       treeboy.train.pred <- predict(treeboy, values$dfram[train, ], type = "class")
       treeboy.test.pred <- predict(treeboy, values$dfram[-train, ], type = "class")
-      
-      values$train.poopi <- with(values$dfram[train, ], table(treeboy.train.pred, Species))
-      bobik <- data.frame(matrix(nrow = nrow(values$train.poopi), ncol = 0))
-      for (i in 1:nrow(values$train.poopi)) {
-        bobik <- cbind(bobik, values$train.poopi[, i])
-      }
-      colnames(bobik) <- rownames(bobik)
-      values$train.poopi <- bobik
-      
-      values$test.poopi <- with(values$dfram[-train, ], table(treeboy.test.pred, Species))
-      bobik2 <- data.frame(matrix(nrow = nrow(values$test.poopi), ncol = 0))
-      for (i in 1:nrow(values$test.poopi)) {
-        bobik2 <- cbind(bobik2, values$test.poopi[, i])
-      }
-      colnames(bobik2) <- rownames(bobik2)
-      values$test.poopi <- bobik2
+      values$accu.train <- confusionMatrix(treeboy.train.pred, values$dfram[train, ][[preval]])
+      values$accu.test <- confusionMatrix(treeboy.test.pred, values$dfram[-train, ][[preval]])
+      values$train.poopi <- with(values$dfram[train, ], table(treeboy.train.pred, values$dfram[train, ][[preval]]))
+      values$test.poopi <- with(values$dfram[-train, ], table(treeboy.test.pred, values$dfram[-train, ][[preval]]))
     } else {
-      set.seed(555)
-      train <- sample(1:nrow(values$dfram), percent * nrow(values$dfram))
-      rfboy <- randomForest(Species ~., data = values$dfram, subset = train, mtry = input$mtry.sel, ntree = input$ntree.sel)
+      rfboy <- randomForest(as.formula(paste0(preval, "~.")), data = values$dfram, subset = train, mtry = input$mtry.sel, ntree = input$ntree.sel)
       rfboy.train.pred <- predict(rfboy, values$dfram[train, ], type = "class")
       rfboy.test.pred <- predict(rfboy, values$dfram[-train, ], type = "class")
-      
-      values$train.poopi <- with(values$dfram[train, ], table(rfboy.train.pred, Species))
-      bobik <- data.frame(matrix(nrow = nrow(values$train.poopi), ncol = 0))
-      for (i in 1:nrow(values$train.poopi)) {
-        bobik <- cbind(bobik, values$train.poopi[, i])
-      }
-      colnames(bobik) <- rownames(bobik)
-      values$train.poopi <- bobik
-      
-      values$test.poopi <- with(values$dfram[-train, ], table(rfboy.test.pred, Species))
-      bobik2 <- data.frame(matrix(nrow = nrow(values$test.poopi), ncol = 0))
-      for (i in 1:nrow(values$test.poopi)) {
-        bobik2 <- cbind(bobik2, values$test.poopi[, i])
-      }
-      colnames(bobik2) <- rownames(bobik2)
-      values$test.poopi <- bobik2
+      values$accu.train <- confusionMatrix(treeboy.train.pred, values$dfram[train, ][[preval]])
+      values$accu.test <- confusionMatrix(treeboy.test.pred, values$dfram[-train, ][[preval]])
+      values$train.poopi <- with(values$dfram[train, ], table(rfboy.train.pred, values$dfram[train, ][[preval]]))
+      values$test.poopi <- with(values$dfram[-train, ], table(rfboy.test.pred, values$dfram[-train, ][[preval]]))
     }
+    
+    bobik <- data.frame(matrix(nrow = nrow(values$train.poopi), ncol = 0))
+    for (i in 1:nrow(values$train.poopi)) {
+      bobik <- cbind(bobik, values$train.poopi[, i])
+    }
+    colnames(bobik) <- rownames(bobik)
+    values$train.poopi <- bobik
+    
+    bobik2 <- data.frame(matrix(nrow = nrow(values$test.poopi), ncol = 0))
+    for (i in 1:nrow(values$test.poopi)) {
+      bobik2 <- cbind(bobik2, values$test.poopi[, i])
+    }
+    colnames(bobik2) <- rownames(bobik2)
+    values$test.poopi <- bobik2
   })
   
   
@@ -229,5 +222,15 @@ server <- function(input, output, session) {
     req(values$train.poopi)
     rhandsontable(values$test.poopi, rowHeaderWidth = 100)
   })
+  
+  output$accutrain <- renderPrint({
+    req(values$accu.train)
+    values$accu.train$overall[1]
+    })
+  
+  output$accutest <- renderPrint({
+    req(values$accu.test)
+    values$accu.test$overall[1]
+    })
   
 }
