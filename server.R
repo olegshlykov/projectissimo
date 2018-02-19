@@ -1,7 +1,7 @@
 server <- function(input, output, session) {
   source("functions.R")  
   
-  values <- reactiveValues(dfram = NULL, pca.out = NULL, cleaned = NULL, sorted = NULL, 
+  values <- reactiveValues(dfram = NULL, pca.out = NULL, cleaned = NULL, cleanedforpca = NULL, sorted = NULL, 
                            train.poopi = NULL, test.poopi = NULL, accu.train = NULL, accu.test = NULL)
   ris = reactiveValues(data = NULL, cluster = NULL, hcl = NULL)
   
@@ -58,18 +58,7 @@ server <- function(input, output, session) {
   
   output$ColSelect <- renderDataTable({
     req(!is.null(values$dfram))
-    cnames <- colnames(values$cleaned)
-    cmean <- colMeans(values$cleaned)
-    cmean <- as.vector(cmean)
-    cmedian <- apply(values$cleaned, 2, median)
-    cmedian <- as.vector(cmedian)
-    cmode <-  apply(values$cleaned, 2, mean)
-    cmode <- as.vector(cmode)
-    crange <- sapply(values$cleaned, range)
-    crange <- paste(crange[1, ], crange[2, ], sep=" - ")
-    ColSel <- data.frame(cnames, cmean, cmedian, cmode, crange)
-    colnames(ColSel) <- c("Column Name", "Mean", "Median", "Mode", "Range")
-    ColSel
+    col.summary(values$cleaned)
   })
   
   output$controls <- renderUI({
@@ -113,6 +102,7 @@ server <- function(input, output, session) {
   
   
   observeEvent(input$ColSelect_rows_selected, {
+    values$cleanedforpca <- values$cleaned[, input$ColSelect_rows_selected]
     updateSelectInput(session, "col1", choices = names(values$dfram[,input$ColSelect_rows_selected]),
                       selected = names(values$dfram[,input$ColSelect_rows_selected[1]])
     )
@@ -135,20 +125,23 @@ server <- function(input, output, session) {
   
   
   observeEvent(input$pcarun, {
-    req(!is.null(values$dfram))
-    if (input$pcnum <= length(values$cleaned)) {
-      cleaned.cor <- cor(values$cleaned)
-      values$pca.out <-  principal(values$cleaned, nfactors = input$pcnum, rotate = input$pcrotate)
-      loadings.table <- data.frame(unclass(values$pca.out$loadings))
-      sorting <- paste0(substring(colnames(loadings.table), 0, 2)[1], sort(as.integer(substring(colnames(loadings.table), 3))))
-      sorted <- loadings.table[, sorting]
-      for (i in 1:length(sorted)) {
-        for (v in 1:length(sorted[, i])) {
-          if ( sorted[v, i] > -input$pcafilter  && sorted[v, i] < input$pcafilter) { sorted[v, i] = NA }
+    req(!is.null(values$cleanedforpca))
+    if (is.null(names(values$cleanedforpca[, sapply(values$cleanedforpca, function(v) var(v, na.rm=TRUE) ==0)]))) { showNotification("Continuous rows man")
+    } else {
+      if (input$pcnum <= length(values$cleanedforpca)) {
+        cleaned.cor <- cor(values$cleanedforpca, use = "complete.obs")
+        values$pca.out <-  principal(values$cleanedforpca, nfactors = input$pcnum, rotate = input$pcrotate)
+        loadings.table <- data.frame(unclass(values$pca.out$loadings))
+        sorting <- paste0(substring(colnames(loadings.table), 0, 2)[1], sort(as.integer(substring(colnames(loadings.table), 3))))
+        sorted <- loadings.table[, sorting]
+        for (i in 1:length(sorted)) {
+          for (v in 1:length(sorted[, i])) {
+            if ( sorted[v, i] > -input$pcafilter  && sorted[v, i] < input$pcafilter) { sorted[v, i] = NA }
+          }
         }
-      }
-      values$sorted <- sorted[order(-sorted[,1], -sorted[,2]), ]
-    } else {showNotification("Invalid number of components")}
+        values$sorted <- sorted[order(-sorted[,1], -sorted[,2]), ]
+      } else {showNotification("Invalid number of components")}
+    }
   })
   
   
@@ -163,8 +156,11 @@ server <- function(input, output, session) {
   
   
   output$eigen <- DT::renderDataTable({
-    req(!is.null(values$cleaned))
-    eigen.get.table(values$cleaned)
+    req(ncol(values$cleanedforpca) >= 2)
+    if (is.null(names(values$cleanedforpca[, sapply(values$cleanedforpca, function(v) var(v, na.rm=TRUE) ==0)]))) { print("Continuous rows man")
+    } else {
+      eigen.get.table(values$cleanedforpca)
+    }
   }, rownames = FALSE, options = list(
     autoWidth = TRUE,
     columnDefs = list(list(width = '100px', targets = "_all"))
@@ -226,11 +222,11 @@ server <- function(input, output, session) {
   output$accutrain <- renderPrint({
     req(values$accu.train)
     values$accu.train$overall[1]
-    })
+  })
   
   output$accutest <- renderPrint({
     req(values$accu.test)
     values$accu.test$overall[1]
-    })
+  })
   
 }

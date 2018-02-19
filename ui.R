@@ -85,7 +85,7 @@ ui <- fluidPage(titlePanel("Projectissimo"),
                            sidebarLayout(
                              sidebarPanel(width = 2,
                                           numericInput("train.percent.sel", "Please select % in train", value = 75, min = 1, max = 100 ),
-                                          selectInput("preval", "Please select predict value:", choices = NULL),
+                                          selectInput("preval", "Please select predict value: (factors only)", choices = NULL),
                                           selectInput("treechoose", "Please select preffered method", choices = c("Decision Trees", "Random Forest"),
                                                       selected = "Decision Trees"),
                                           conditionalPanel(
@@ -97,14 +97,14 @@ ui <- fluidPage(titlePanel("Projectissimo"),
                              ),
                              mainPanel(
                                column(width = 4,
-                                 tags$h1("Train prediction"),
-                               rHandsontableOutput("train.prediction"),
-                               textOutput("accutrain")
+                                      tags$h1("Train prediction"),
+                                      rHandsontableOutput("train.prediction"),
+                                      textOutput("accutrain")
                                ),
                                column(width = 4,
-                               tags$h1("Test prediction"),
-                               rHandsontableOutput("test.prediction"),
-                               textOutput("accutest")
+                                      tags$h1("Test prediction"),
+                                      rHandsontableOutput("test.prediction"),
+                                      textOutput("accutest")
                                )
                              )
                            )
