@@ -2,8 +2,8 @@ server <- function(input, output, session) {
   source("functions.R")  
   
   values <- reactiveValues(dfram = NULL, pca.out = NULL, cleaned = NULL, cleanedforpca = NULL, sorted = NULL, 
-                           train.poopi = NULL, test.poopi = NULL, accu.train = NULL, accu.test = NULL)
-  ris = reactiveValues(data = NULL, cluster = NULL, hcl = NULL)
+                           train.poopi = NULL, test.poopi = NULL, accu.train = NULL, accu.test = NULL, cluster = NULL, hcl = NULL)
+  ris = reactiveValues(data = NULL)
   
   observeEvent(input$file1, {
     values$dfram <- read.csv(input$file1$datapath,
@@ -16,6 +16,8 @@ server <- function(input, output, session) {
     updateSelectInput(session, "preval", choices = names(colfact[colfact]),
                       selected = names(colfact[colfact][1]))
     updateNumericInput(session, "mtry.sel", value = sqrt(ncol(values$dfram)))
+    values$cluster <- NULL
+    values$hcl <- NULL
   })
   
   
@@ -61,6 +63,18 @@ server <- function(input, output, session) {
     col.summary(values$cleaned)
   })
   
+  
+  observeEvent(input$ColSelect_rows_selected, {
+    values$cleanedforpca <- values$cleaned[, input$ColSelect_rows_selected]
+    updateSelectInput(session, "col1", choices = names(values$cleanedforpca),
+                      selected = names(values$cleanedforpca)[1]
+    )
+    req(length(input$ColSelect_rows_selected) >= 2)
+    updateSelectInput(session, "col2", choices = names(values$cleanedforpca),
+                      selected = names(values$cleanedforpca)[2]
+    )
+  })
+  
   output$controls <- renderUI({
     if (input$ctype == "K-Means") {
       tagList(
@@ -82,55 +96,41 @@ server <- function(input, output, session) {
   
   
   observeEvent(input$clupdate, {
-    if (!is.null(input$ColSelect_rows_selected)) {
+    if (length(input$ColSelect_rows_selected) >=2) {
       if ( input$ctype == "K-Means") {
         req(!is.null(values$dfram))
-        ris$data <- values$cleaned
-        features <- c(values$cleaned[, input$ColSelect_rows_selected])
         n_clusters <- input$centers
-        iris_clusters <- kmeans(values$cleaned[, input$ColSelect_rows_selected], n_clusters, iter.max = input$iter, 
+        iris_clusters <- kmeans(values$cleanedforpca, n_clusters, iter.max = input$iter, 
                                 nstart = input$nstart, algorithm = input$algo)
-        ris$cluster <- as.factor(iris_clusters$cluster)
+        values$cluster <- as.factor(iris_clusters$cluster)
       } else {
-        dd <- dist(ris$data)
-        ris$hcl <- hclust(dd, method = input$method)
+        values$hcl <- hclust(dist(values$cleanedforpca), method = input$method)
       }
     } else {
-      showNotification("Please select columns to cluster")
+      showNotification("Please select at least 2 columns to cluster")
     }
-  })
-  
-  
-  observeEvent(input$ColSelect_rows_selected, {
-    values$cleanedforpca <- values$cleaned[, input$ColSelect_rows_selected]
-    updateSelectInput(session, "col1", choices = names(values$dfram[,input$ColSelect_rows_selected]),
-                      selected = names(values$dfram[,input$ColSelect_rows_selected[1]])
-    )
-    req(length(input$ColSelect_rows_selected) >= 2)
-    updateSelectInput(session, "col2", choices = names(values$dfram[,input$ColSelect_rows_selected]),
-                      selected = names(values$dfram[,input$ColSelect_rows_selected[2]])
-    )
   })
   
   output$Plotidze <- renderPlot({
     if ( input$ctype == "K-Means") {
-      req(!is.null(ris$cluster))
+      req(!is.null(values$cluster), input$clupdate)
       
-      ggplot(ris$data, aes_string(input$col1, input$col2)) + geom_point(aes(color = ris$cluster)) + guides(colour = guide_legend("Clusters"))
+      ggplot(values$cleanedforpca, aes_string(input$col1, input$col2)) + geom_point(aes(color = values$cluster)) + guides(colour = guide_legend("Clusters"))
     } else { 
-      req(!is.null(ris$hcl))
-      ggdendrogram(ris$hcl, theme_dendro = FALSE)
+      req(!is.null(values$hcl))
+      ggdendrogram(values$hcl, theme_dendro = FALSE)
     }
   })
   
   
   observeEvent(input$pcarun, {
     req(!is.null(values$cleanedforpca))
-    if (is.null(names(values$cleanedforpca[, sapply(values$cleanedforpca, function(v) var(v, na.rm=TRUE) ==0)]))) { showNotification("Continuous rows man")
+    conti <- sapply(values$cleanedforpca, function(x) var(x, na.rm = TRUE) == 0)
+    if (any(conti)) { showNotification("Continuous rows man")
     } else {
       if (input$pcnum <= length(values$cleanedforpca)) {
-        cleaned.cor <- cor(values$cleanedforpca, use = "complete.obs")
-        values$pca.out <-  principal(values$cleanedforpca, nfactors = input$pcnum, rotate = input$pcrotate)
+        cleaned.cor <- cor(values$cleanedforpca, use = "pairwise.complete.obs")
+        values$pca.out <-  principal(cleaned.cor, nfactors = input$pcnum, rotate = input$pcrotate)
         loadings.table <- data.frame(unclass(values$pca.out$loadings))
         sorting <- paste0(substring(colnames(loadings.table), 0, 2)[1], sort(as.integer(substring(colnames(loadings.table), 3))))
         sorted <- loadings.table[, sorting]
@@ -157,10 +157,11 @@ server <- function(input, output, session) {
   
   output$eigen <- DT::renderDataTable({
     req(ncol(values$cleanedforpca) >= 2)
-    if (is.null(names(values$cleanedforpca[, sapply(values$cleanedforpca, function(v) var(v, na.rm=TRUE) ==0)]))) { print("Continuous rows man")
-    } else {
-      eigen.get.table(values$cleanedforpca)
-    }
+    conti <- sapply(values$cleanedforpca, function(x) var(x, na.rm = TRUE) == 0)
+    validate (
+      need(!any(conti), "Continuous rows man" )
+    )
+    eigen.get.table(values$cleanedforpca)
   }, rownames = FALSE, options = list(
     autoWidth = TRUE,
     columnDefs = list(list(width = '100px', targets = "_all"))
