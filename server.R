@@ -10,12 +10,6 @@ server <- function(input, output, session) {
                              header = input$header,
                              sep = input$sep,
                              quote = input$quo)
-    numers <- sapply(values$dfram, is.numeric)
-    values$cleaned <- values$dfram[, numers]
-    colfact <- sapply(values$dfram, is.factor)
-    updateSelectInput(session, "preval", choices = names(colfact[colfact]),
-                      selected = names(colfact[colfact][1]))
-    updateNumericInput(session, "mtry.sel", value = sqrt(ncol(values$dfram)))
     values$cluster <- NULL
     values$hcl <- NULL
   })
@@ -28,13 +22,9 @@ server <- function(input, output, session) {
     updateSelectInput(session, "preval", choices = names(colfact[colfact]),
                       selected = names(colfact[colfact][1]))
     updateNumericInput(session, "mtry.sel", value = sqrt(ncol(values$dfram)))
+    updateSelectInput(session, "coldisp", choices = names(values$cleaned),
+                      selected = names(values$cleaned)[1])
   })
-  
-  
-  output$textfile <- DT::renderDataTable({
-    head(values$dfram, 10)
-  })
-  
   
   output$datatypechange <- renderRHandsontable({
     req(!is.null(values$dfram))
@@ -58,11 +48,84 @@ server <- function(input, output, session) {
   })
   
   
+  output$textfile <- DT::renderDataTable({
+    head(values$dfram, 10)
+  })
+  
+  output$impNA <- renderRHandsontable({
+    req(!is.null(values$cleaned))
+    ds <- values$cleaned
+    imp.types <- c("---", "mode", "median", "mean", "avg.q")
+    varname <- colnames(values$cleaned)
+    nanum <- apply(is.na(ds), 2, sum)
+    nanum <- as.vector(nanum)
+    default.impute <- vector(mode="numeric", length = length(nanum))
+    for(i in 1:length(nanum)) {
+      if(nanum[i] == 0) {
+        default.impute[i] <- "---"
+      } else {
+        default.impute[i] <- "mode"
+      }
+    }
+    out <- data.frame(varname, nanum, default.impute)
+    colnames(out) <- c("Name", "NA's", "Impute type")
+    rownames(out) <- 1:length(values$cleaned)
+    rhandsontable(out, stretchH = "none", rowHeaderWidth = 30) %>% 
+      hot_col("Name", readOnly = TRUE, width = 150) %>% 
+      hot_col("NA's", readOnly = TRUE) %>% 
+      hot_col("Impute type", type = "dropdown", source = imp.types)
+  })
+  
+  observeEvent(input$impute.NA, {
+    treatna <- hot_to_r(input$impNA)
+    treatna <- as.vector(treatna[, 3])
+    values$cleaned <- treat.na.pls(values$cleaned, treatna)
+    
+  })
+  
+  output$impMinmax <- renderRHandsontable({
+    req(!is.null(values$cleaned))
+    ds <- values$cleaned
+    varname <- colnames(values$cleaned)
+    pookie <- rep("---", ncol(values$cleaned))
+    pookie2 <- rep("---", ncol(values$cleaned))
+    plist <- c("---", "5%", "10%")
+    plist2 <- c("---", "90%", "95%")
+    out <- data.frame(varname, pookie, pookie2)
+    colnames(out) <- c("Name", "From", "To")
+    rownames(out) <- 1:length(values$cleaned)
+    rhandsontable(out, stretchH = "none", rowHeaderWidth = 30) %>% 
+      hot_col("Name", readOnly = TRUE, width = 150) %>% 
+      hot_col("From", type = "dropdown", source = plist) %>% 
+      hot_col("To", type = "dropdown", source = plist2)
+  })
+  
+  observeEvent(input$impute.minmax, {
+    impute <- hot_to_r(input$impMinmax)
+    L.impute <- as.vector(impute[, 2])
+    H.impute <- as.vector(impute[, 3])
+    values$cleaned <- impute.minmax.pls(values$cleaned, L.impute, H.impute)
+  })
+  
+  output$vdisp <- renderPlot({
+    req(values$cleaned)
+    if (input$plotdisp == "Boxplot") {
+      boxplot(values$cleaned[, input$coldisp], main = input$coldisp)
+    } else {
+      if (input$plotdisp == "Histogram") {
+        hist(values$cleaned[, input$coldisp], main = input$coldisp, xlab = NULL)
+      } else {
+        stripchart(values$cleaned[, input$coldisp], main = input$coldisp)
+      }
+    }
+    
+    
+  })
+  
   output$ColSelect <- renderDataTable({
     req(!is.null(values$dfram))
     col.summary(values$cleaned)
   })
-  
   
   observeEvent(input$ColSelect_rows_selected, {
     values$cleanedforpca <- values$cleaned[, input$ColSelect_rows_selected]
@@ -169,7 +232,7 @@ server <- function(input, output, session) {
   
   
   observeEvent(input$run.tree, {
-    req(values$dfram)
+    req(values$dfram, input$preval)
     percent <- input$train.percent.sel * 0.01
     preval <- input$preval
     set.seed(555)
@@ -184,7 +247,8 @@ server <- function(input, output, session) {
       values$train.poopi <- with(values$dfram[train, ], table(treeboy.train.pred, values$dfram[train, ][[preval]]))
       values$test.poopi <- with(values$dfram[-train, ], table(treeboy.test.pred, values$dfram[-train, ][[preval]]))
     } else {
-      rfboy <- randomForest(as.formula(paste0(preval, "~.")), data = values$dfram, subset = train, mtry = input$mtry.sel, ntree = input$ntree.sel)
+      rfboy <- randomForest(as.formula(paste0(preval, "~.")), data = values$dfram, 
+                            subset = train, mtry = input$mtry.sel, ntree = input$ntree.sel)
       rfboy.train.pred <- predict(rfboy, values$dfram[train, ], type = "class")
       rfboy.test.pred <- predict(rfboy, values$dfram[-train, ], type = "class")
       values$accu.train <- confusionMatrix(rfboy.train.pred, values$dfram[train, ][[preval]])

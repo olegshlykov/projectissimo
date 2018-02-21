@@ -36,6 +36,37 @@ ui <- fluidPage(titlePanel("Projectissimo"),
                              ),
                              mainPanel(dataTableOutput("textfile"))
                            )),
+                  tabPanel("Data treatment",
+                           sidebarLayout(
+                             sidebarPanel(width = 6,
+                                          fluidRow(
+                                            #need conditional panel
+                                            column(width = 6,
+                                                   tags$h3("NA treatment"),
+                                                   rHandsontableOutput("impNA"),
+                                                   actionButton("impute.NA", "Apply", icon = icon("rocket"))
+                                            ),
+                                            column(width = 6,
+                                                   tags$h3("Outliers treatment"),
+                                                   rHandsontableOutput("impMinmax"),
+                                                   actionButton("impute.minmax", "Apply", icon = icon("rocket"))
+                                            ))
+                             ),
+                             mainPanel(width = 6,
+                                       fluidRow(
+                                         column(width = 6,
+                                                selectInput("coldisp", "Column to plot", choices = NULL, selected = NULL)
+                                         ),
+                                         column(width = 6,
+                                                selectInput("plotdisp", "Type of plot", choices = c("Boxplot", "Histogram", "Stripchart"), 
+                                                            selected = "Boxplot")
+                                         )
+                                       ),
+                                       fluidRow(
+                                         plotOutput("vdisp"))
+                             )
+                           )
+                  ),
                   
                   tabPanel(
                     "Column selection",
