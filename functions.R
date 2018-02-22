@@ -42,6 +42,7 @@ treat.na.pls <- function(x, types){
             }
           } else {
             showNotification(paste("unable to impute mode in column number", i))
+            loginfo("unable to impute mode in column number %d", i)
           }
         }
       } else {

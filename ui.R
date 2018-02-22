@@ -8,6 +8,8 @@ library(caret)
 library(psych)
 library(rpart)
 library(randomForest)
+library(logging)
+basicConfig()
 
 ui <- fluidPage(titlePanel("Projectissimo"),
                 

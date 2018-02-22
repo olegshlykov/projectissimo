@@ -12,6 +12,7 @@ server <- function(input, output, session) {
                              quote = input$quo)
     values$cluster <- NULL
     values$hcl <- NULL
+    loginfo('data uploaded from %s', input$file1$name)
   })
   
   
@@ -45,6 +46,7 @@ server <- function(input, output, session) {
     type.vector <- hot_to_r(input$datatypechange)
     type.vector <- as.vector(type.vector[, 2])
     values$dfram <- convert.types(values$dfram, type.vector)
+    loginfo("data type changed")
   })
   
   
@@ -80,7 +82,7 @@ server <- function(input, output, session) {
     treatna <- hot_to_r(input$impNA)
     treatna <- as.vector(treatna[, 3])
     values$cleaned <- treat.na.pls(values$cleaned, treatna)
-    
+    loginfo("NA treated")
   })
   
   output$impMinmax <- renderRHandsontable({
@@ -105,6 +107,7 @@ server <- function(input, output, session) {
     L.impute <- as.vector(impute[, 2])
     H.impute <- as.vector(impute[, 3])
     values$cleaned <- impute.minmax.pls(values$cleaned, L.impute, H.impute)
+    loginfo("outliers treated")
   })
   
   output$vdisp <- renderPlot({
@@ -166,8 +169,10 @@ server <- function(input, output, session) {
         iris_clusters <- kmeans(values$cleanedforpca, n_clusters, iter.max = input$iter, 
                                 nstart = input$nstart, algorithm = input$algo)
         values$cluster <- as.factor(iris_clusters$cluster)
+        loginfo("K-means clustering performed")
       } else {
         values$hcl <- hclust(dist(values$cleanedforpca), method = input$method)
+        loginfo("H clustering performed")
       }
     } else {
       showNotification("Please select at least 2 columns to cluster")
@@ -203,8 +208,9 @@ server <- function(input, output, session) {
           }
         }
         values$sorted <- sorted[order(-sorted[,1], -sorted[,2]), ]
+        loginfo("PCA performed")
       } else {showNotification("Invalid number of components")}
-    }
+    } 
   })
   
   
@@ -246,6 +252,7 @@ server <- function(input, output, session) {
       values$accu.test <- confusionMatrix(treeboy.test.pred, values$dfram[-train, ][[preval]])
       values$train.poopi <- with(values$dfram[train, ], table(treeboy.train.pred, values$dfram[train, ][[preval]]))
       values$test.poopi <- with(values$dfram[-train, ], table(treeboy.test.pred, values$dfram[-train, ][[preval]]))
+      loginfo("Decision trees classification applied")
     } else {
       rfboy <- randomForest(as.formula(paste0(preval, "~.")), data = values$dfram, 
                             subset = train, mtry = input$mtry.sel, ntree = input$ntree.sel)
@@ -255,6 +262,7 @@ server <- function(input, output, session) {
       values$accu.test <- confusionMatrix(rfboy.test.pred, values$dfram[-train, ][[preval]])
       values$train.poopi <- with(values$dfram[train, ], table(rfboy.train.pred, values$dfram[train, ][[preval]]))
       values$test.poopi <- with(values$dfram[-train, ], table(rfboy.test.pred, values$dfram[-train, ][[preval]]))
+      loginfo("Random Forests classification applied")
     }
     
     bobik <- data.frame(matrix(nrow = nrow(values$train.poopi), ncol = 0))
